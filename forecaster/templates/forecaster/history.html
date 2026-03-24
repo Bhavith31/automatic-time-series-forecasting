@@ -1,0 +1,62 @@
+{% extends 'forecaster/base.html' %}
+{% block title %}History — ForecastIQ{% endblock %}
+{% block nav_history %}active{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem">
+    <div>
+        <h1 class="section-title">📋 Forecast History</h1>
+        <p style="color:var(--muted);font-size:.88rem">All your past forecasting sessions</p>
+    </div>
+    <a href="{% url 'index' %}" class="btn-primary" style="text-decoration:none;font-size:.88rem">+ New Forecast</a>
+</div>
+
+{% if not forecasts %}
+<div class="card" style="text-align:center;padding:4rem">
+    <div style="font-size:3rem;margin-bottom:1rem">📭</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;margin-bottom:.5rem;color:var(--forest)">No forecasts yet</div>
+    <div style="color:var(--muted);margin-bottom:1.5rem">Run your first forecast to see it here</div>
+    <a href="{% url 'index' %}" class="btn-primary" style="text-decoration:none">← Go Forecast</a>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--forest),var(--forest-lt))"></div>
+    <div class="tbl-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dataset</th>
+                    <th>Days</th>
+                    <th>Trend</th>
+                    <th>MAE</th>
+                    <th>RMSE</th>
+                    <th>Records</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in forecasts %}
+                <tr>
+                    <td style="font-weight:600;font-size:.88rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.dataset_name }}</td>
+                    <td><span class="badge badge-green">{{ f.forecast_days }}d</span></td>
+                    <td style="font-size:.88rem">{{ f.trend }}</td>
+                    <td style="font-family:monospace;font-size:.85rem">{{ f.mae }}</td>
+                    <td style="font-family:monospace;font-size:.85rem">{{ f.rmse }}</td>
+                    <td style="font-size:.85rem">{{ f.total_records }}</td>
+                    <td style="font-size:.78rem;color:var(--muted)">{{ f.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <div style="display:flex;gap:.4rem">
+                            <a href="{% url 'show_result' f.id %}" class="btn-secondary" style="font-size:.75rem;padding:.3rem .65rem;text-decoration:none">👁 View</a>
+                            <a href="{% url 'download_result' f.id %}" class="btn-secondary" style="font-size:.75rem;padding:.3rem .65rem;text-decoration:none">⬇️</a>
+                            <a href="{% url 'delete_forecast' f.id %}" class="btn-danger" onclick="return confirm('Delete this forecast?')" style="font-size:.75rem;padding:.3rem .65rem">🗑</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

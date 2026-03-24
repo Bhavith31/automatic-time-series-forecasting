@@ -1,0 +1,264 @@
+{% extends 'forecaster/base.html' %}
+{% block title %}Forecast Results — ForecastIQ{% endblock %}
+{% block nav_index %}active{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem">
+    <div>
+        <h1 class="section-title" style="margin-bottom:.25rem">📊 Forecast Results</h1>
+        <p style="color:var(--muted);font-size:.88rem">{{ forecast.dataset_name }} · {{ forecast.forecast_days }} day forecast</p>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <a href="{% url 'download_result' forecast.id %}" class="btn-primary" style="text-decoration:none;font-size:.88rem;padding:.65rem 1.25rem">
+            ⬇️ Download CSV
+        </a>
+        <a href="{% url 'index' %}" class="btn-secondary">← New Forecast</a>
+    </div>
+</div>
+
+<!-- SUMMARY STATS -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-box sb-forest">
+        <div class="stat-icon">📅</div>
+        <div class="stat-num" style="color:var(--forest);font-size:1.3rem">{{ forecast.forecast_days }}</div>
+        <div class="stat-lbl">Days Forecasted</div>
+    </div>
+    <div class="stat-box sb-sage">
+        <div class="stat-icon">📉</div>
+        <div class="stat-num" style="color:var(--forest-lt);font-size:1.3rem">{{ forecast.mae }}</div>
+        <div class="stat-lbl">MAE (Error)</div>
+    </div>
+    <div class="stat-box sb-gold">
+        <div class="stat-icon">📈</div>
+        <div class="stat-num" style="color:var(--gold);font-size:1.3rem">{{ forecast.rmse }}</div>
+        <div class="stat-lbl">RMSE Score</div>
+    </div>
+    <div class="stat-box sb-amber">
+        <div class="stat-icon">🌿</div>
+        <div class="stat-num" style="color:var(--forest);font-size:1.1rem">{{ forecast.trend }}</div>
+        <div class="stat-lbl">Detected Trend</div>
+    </div>
+</div>
+
+<!-- CHART CARD -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--forest),var(--sage))"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
+        <div>
+            <div class="section-title" style="font-size:1.2rem;margin-bottom:.2rem">Sales Trend & Forecast</div>
+            <div style="font-size:.82rem;color:var(--muted)">Historical data + {{ forecast.forecast_days }}-day prediction with confidence band</div>
+        </div>
+        <div style="display:flex;gap:.6rem;font-size:.78rem;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:.4rem"><span style="width:20px;height:3px;background:var(--forest);display:inline-block;border-radius:2px"></span>Historical</span>
+            <span style="display:flex;align-items:center;gap:.4rem"><span style="width:20px;height:3px;background:var(--sage);display:inline-block;border-radius:2px"></span>7-Day Avg</span>
+            <span style="display:flex;align-items:center;gap:.4rem"><span style="width:20px;height:3px;background:var(--gold);display:inline-block;border-radius:2px"></span>Forecast</span>
+        </div>
+    </div>
+    <div style="height:380px;position:relative">
+        <canvas id="forecastChart"></canvas>
+    </div>
+</div>
+
+<!-- FORECAST DETAILS ROW -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+
+    <!-- FORECAST SUMMARY -->
+    <div class="card">
+        <div class="card-top" style="background:var(--forest-lt)"></div>
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:1rem">🎯 Forecast Summary</div>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+            {% for label, val in forecast_summary %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;background:var(--forest-2xl);border-radius:10px;border:1px solid var(--border)">
+                <span style="font-size:.85rem;color:var(--muted)">{{ label }}</span>
+                <span style="font-weight:700;font-size:.9rem;color:var(--forest)">{{ val }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- FIRST 10 FORECAST VALUES -->
+    <div class="card">
+        <div class="card-top" style="background:var(--gold)"></div>
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:1rem">📋 First 10 Forecast Days</div>
+        <div class="tbl-wrap" style="max-height:280px;overflow-y:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Forecast</th>
+                        <th>Range</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in first_ten %}
+                    <tr>
+                        <td style="font-family:monospace;font-size:.8rem">{{ row.date }}</td>
+                        <td style="font-weight:700;color:var(--forest)">{{ row.value }}</td>
+                        <td style="font-size:.78rem;color:var(--muted)">{{ row.lower }} – {{ row.upper }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── DRAW THE FORECAST CHART ───────────────────────────────
+// result_json is passed from Django view containing all chart data
+const result = {{ result_json|safe }};
+
+const ctx = document.getElementById('forecastChart').getContext('2d');
+
+// Show only last 90 days of historical data on chart (for readability)
+const histLen   = result.historical_dates.length;
+const showLast  = Math.min(90, histLen);
+const histDates = result.historical_dates.slice(-showLast);
+const histVals  = result.historical_values.slice(-showLast);
+const movAvg    = result.moving_avg.slice(-showLast);
+
+// Combine historical + forecast dates for x-axis
+const allDates  = [...histDates, ...result.forecast_dates];
+
+// Build datasets for the chart
+// Historical line = actual past data
+// Moving average = smoothed version of past data
+// Forecast = future predictions
+// Confidence band = upper and lower bounds
+
+const histData      = [...histVals, ...new Array(result.forecast_dates.length).fill(null)];
+const movAvgData    = [...movAvg,   ...new Array(result.forecast_dates.length).fill(null)];
+const prophetFit    = result.prophet_fit
+    ? [...result.prophet_fit, ...new Array(result.forecast_dates.length).fill(null)]
+    : [];
+const forecastData  = [...new Array(showLast).fill(null), ...result.forecast_values];
+const upperData     = [...new Array(showLast).fill(null), ...result.forecast_upper];
+const lowerData     = [...new Array(showLast).fill(null), ...result.forecast_lower];
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: allDates,
+        datasets: [
+            {
+                // Dark green solid line — real historical sales
+                label: 'Historical Sales',
+                data: histData,
+                borderColor: '#1a3d2b',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 4,
+            },
+            {
+                // Sage dashed line — 7-day smoothed average
+                label: '7-Day Moving Avg',
+                data: movAvgData,
+                borderColor: '#40916c',
+                borderWidth: 1.5,
+                borderDash: [8, 4],
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false,
+                order: 3,
+            },
+            {
+                // Blue dashed line — Prophet fit on historical data
+                // Shows how well Prophet learned past patterns
+                label: 'Prophet Fit',
+                data: prophetFit,
+                borderColor: 'rgba(59,130,246,0.65)',
+                borderWidth: 1.5,
+                borderDash: [3, 2],
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false,
+                order: 3,
+            },
+            {
+                // GOLD LINE WITH DOTS — The Prophet forecast!
+                // NOW shows realistic ups and downs (weekly patterns!)
+                // Each dot = one future day prediction
+                label: 'Prophet Forecast',
+                data: forecastData,
+                borderColor: '#c9a84c',
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#c9a84c',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 1.5,
+                tension: 0.4,
+                fill: false,
+                order: 1,
+            },
+            {
+                // Upper confidence band — 80% CI upper bound
+                label: 'Upper Bound (80% CI)',
+                data: upperData,
+                borderColor: 'rgba(201,168,76,0.3)',
+                borderWidth: 1,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.4,
+                order: 5,
+            },
+            {
+                // Lower confidence band — fills between upper and lower
+                label: 'Lower Bound (80% CI)',
+                data: lowerData,
+                borderColor: 'rgba(201,168,76,0.3)',
+                borderWidth: 1,
+                pointRadius: 0,
+                backgroundColor: 'rgba(201,168,76,0.10)',
+                fill: '-1',
+                tension: 0.4,
+                order: 6,
+            },
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom',
+                labels: { color: '#6b8f71', font: { family: 'DM Sans', size: 11 }, padding: 16 }
+            },
+            tooltip: {
+                backgroundColor: '#1a3d2b',
+                titleColor: '#95d5b2',
+                bodyColor: '#ffffff',
+                padding: 10,
+                callbacks: {
+                    label: ctx => ctx.raw !== null ? `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` : ''
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(200,230,201,0.5)' },
+                ticks: {
+                    color: '#6b8f71', font: { family: 'DM Sans', size: 10 },
+                    maxTicksLimit: 12,
+                    maxRotation: 45
+                }
+            },
+            y: {
+                grid: { color: 'rgba(200,230,201,0.5)' },
+                ticks: {
+                    color: '#6b8f71', font: { family: 'DM Sans' },
+                    callback: val => val.toLocaleString()
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

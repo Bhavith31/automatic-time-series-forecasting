@@ -1,0 +1,197 @@
+{% extends 'forecaster/base.html' %}
+{% block title %}ForecastIQ — Sales Forecasting{% endblock %}
+{% block nav_index %}active{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<div style="text-align:center;padding:2rem 1rem 2.5rem">
+    <div style="display:inline-flex;align-items:center;gap:.4rem;background:var(--forest-xl);border:1px solid var(--border);color:var(--forest);font-size:.75rem;font-weight:700;padding:.35rem 1rem;border-radius:999px;margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:.5px;">
+        🌿 Machine Learning · Time Series · prophet
+    </div>
+    <h1 style="font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:700;color:var(--forest);letter-spacing:-.5px;line-height:1.15;margin-bottom:.75rem;">
+        Automatic Time Series<br>
+        <span style="color:var(--forest-lt)">Sales Forecasting</span>
+    </h1>
+    <p style="color:var(--muted);font-size:1rem;line-height:1.7;max-width:500px;margin:0 auto">
+        Upload your sales CSV or use our default dataset. Our AI model will analyze the trend and forecast future values instantly.
+    </p>
+</div>
+
+<!-- ERROR -->
+{% if error %}
+<div class="error-box">⚠️ {{ error }}</div>
+{% endif %}
+
+<!-- MAIN FORM CARD -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--forest),var(--forest-lt),var(--sage))"></div>
+
+    <form method="POST" action="{% url 'run_forecast' %}" enctype="multipart/form-data" id="forecastForm">
+        {% csrf_token %}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+
+            <!-- LEFT: DATA SOURCE -->
+            <div>
+                <div class="section-title" style="font-size:1.2rem;margin-bottom:.25rem">📂 Data Source</div>
+                <div class="section-sub" style="margin-bottom:1rem">Upload your CSV or use default sales data</div>
+
+                <!-- DEFAULT DATA TOGGLE -->
+                <div style="background:var(--forest-xl);border:1.5px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem;">
+                    <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text)">
+                        <input type="checkbox" id="useDefault" name="use_default" value="true"
+                               style="width:18px;height:18px;accent-color:var(--forest);cursor:pointer">
+                        <div>
+                            <strong>Use Default Sales Data</strong><br>
+                            <span style="font-size:.78rem;color:var(--muted)">2 years of daily sales (Jan 2022 – Dec 2023)</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- CSV UPLOAD -->
+                <div id="uploadSection">
+                    <label>Or Upload Your CSV File</label>
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" name="csv_file" id="csvFile" accept=".csv" onchange="onFileChosen(event)">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-title">Click to upload or drag & drop</div>
+                        <div class="upload-sub">.csv files only · Max 10 MB</div>
+                    </div>
+                    <div id="fileChosen" style="display:none;background:var(--forest-xl);border:1.5px solid var(--border);border-radius:10px;padding:.75rem 1rem;margin-top:.5rem;display:none;align-items:center;gap:.75rem;">
+                        <span style="font-size:1.3rem">📄</span>
+                        <span id="fileName" style="font-weight:600;font-size:.9rem;color:var(--forest);flex:1"></span>
+                        <button type="button" onclick="removeFile()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.1rem">✕</button>
+                    </div>
+                </div>
+
+                <!-- CSV FORMAT HINT -->
+                <div style="background:#f0fdf4;border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-top:.75rem;font-size:.8rem;color:var(--forest);line-height:1.6">
+                    📋 <strong>CSV Format:</strong> Your file should have a <strong>date</strong> column
+                    and a <strong>sales/value</strong> column. We auto-detect both!<br>
+                    Example: <code>date,sales</code> then <code>2024-01-01,1500.50</code>
+                </div>
+            </div>
+
+            <!-- RIGHT: SETTINGS -->
+            <div>
+                <div class="section-title" style="font-size:1.2rem;margin-bottom:.25rem">⚙️ Forecast Settings</div>
+                <div class="section-sub" style="margin-bottom:1rem">Configure how far ahead to predict</div>
+
+                <div class="form-group">
+                    <label>Forecast Period (Days)</label>
+                    <input type="number" name="forecast_days" value="30" min="7" max="365" id="forecastDays">
+                    <div style="font-size:.75rem;color:var(--muted);margin-top:.35rem">
+                        How many days into the future to forecast (7 to 365 days)
+                    </div>
+                </div>
+
+                <!-- QUICK PERIOD BUTTONS -->
+                <div style="margin-bottom:1.25rem">
+                    <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.5rem">Quick Select</div>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+                        {% for days, label in period_options %}
+                        <button type="button" class="period-btn" onclick="setDays({{ days }})"
+                                style="background:var(--forest-xl);border:1.5px solid var(--border);color:var(--forest);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;padding:.35rem .8rem;border-radius:999px;cursor:pointer;transition:.2s">
+                            {{ label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- MODEL INFO -->
+                <div class="form-group">
+                    <label>Forecasting Model</label>
+                    <div style="background:var(--forest-xl);border:1.5px solid var(--border);border-radius:12px;padding:.8rem 1rem;font-size:.9rem;font-weight:600;color:var(--forest)">
+                        📐 Prophet
+                    </div>
+                    <div style="font-size:.75rem;color:var(--muted);margin-top:.35rem">
+                        Finds the best straight-line trend through your data and extends it forward
+                    </div>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <button type="submit" class="btn-primary" id="submitBtn" style="width:100%;justify-content:center;margin-top:.5rem">
+                    <span id="btnTxt">🚀 Run Forecast</span>
+                    <div class="spinner" id="btnSpin"></div>
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--sage),var(--forest-xl))"></div>
+    <div class="section-title" style="font-size:1.1rem;margin-bottom:1rem">🧠 How It Works</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem">
+        {% for step in how_it_works %}
+        <div style="text-align:center;padding:.85rem">
+            <div style="font-size:1.8rem;margin-bottom:.5rem">{{ step.icon }}</div>
+            <div style="font-weight:700;font-size:.88rem;color:var(--forest);margin-bottom:.3rem">{{ step.title }}</div>
+            <div style="font-size:.78rem;color:var(--muted);line-height:1.5">{{ step.desc }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Period quick buttons
+function setDays(days) {
+    document.getElementById('forecastDays').value = days;
+    document.querySelectorAll('.period-btn').forEach(b => {
+        b.style.background = 'var(--forest-xl)';
+        b.style.color = 'var(--forest)';
+    });
+    event.target.style.background = 'var(--forest)';
+    event.target.style.color = 'white';
+}
+
+// Use default checkbox toggle
+document.getElementById('useDefault').addEventListener('change', function() {
+    document.getElementById('uploadSection').style.opacity = this.checked ? '.4' : '1';
+    document.getElementById('uploadSection').style.pointerEvents = this.checked ? 'none' : 'auto';
+});
+
+// File chosen
+let chosenFile = null;
+function onFileChosen(e) {
+    chosenFile = e.target.files[0];
+    if (!chosenFile) return;
+    document.getElementById('fileChosen').style.display = 'flex';
+    document.getElementById('fileName').textContent = chosenFile.name;
+    document.getElementById('uploadZone').style.display = 'none';
+}
+
+function removeFile() {
+    chosenFile = null;
+    document.getElementById('csvFile').value = '';
+    document.getElementById('fileChosen').style.display = 'none';
+    document.getElementById('uploadZone').style.display = 'block';
+}
+
+// Drag & drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f && f.name.endsWith('.csv')) {
+        document.getElementById('csvFile').files = e.dataTransfer.files;
+        onFileChosen({target: {files: [f]}});
+    }
+});
+
+// Form submit loading state
+document.getElementById('forecastForm').addEventListener('submit', () => {
+    document.getElementById('btnTxt').style.display = 'none';
+    document.getElementById('btnSpin').style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+});
+</script>
+{% endblock %}

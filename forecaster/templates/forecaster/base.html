@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ForecastIQ{% endblock %}</title>
+
+    <!-- Completely new fonts — Cormorant Garamond + DM Sans -->
+    <!-- Cormorant = ultra elegant serif for headings -->
+    <!-- DM Sans = clean readable body font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ── DEEP FOREST GREEN THEME ───────────────────────
+           Completely different from all previous projects!
+           Premium, nature-inspired, professional feel.
+        ─────────────────────────────────────────────────── */
+        :root {
+            --forest:     #1a3d2b;   /* Deep forest green - primary */
+            --forest-md:  #2d6a4f;   /* Medium forest green */
+            --forest-lt:  #40916c;   /* Light forest green */
+            --forest-xl:  #d8f3dc;   /* Very light green - backgrounds */
+            --forest-2xl: #f0faf2;   /* Barely green - page background */
+            --sage:       #95d5b2;   /* Sage green - accent */
+            --gold:       #c9a84c;   /* Gold accent for highlights */
+            --amber:      #e9c46a;   /* Warm amber for charts */
+            --white:      #ffffff;
+            --text:       #1a2e1e;   /* Very dark green text */
+            --muted:      #6b8f71;   /* Muted green-grey */
+            --border:     #c8e6c9;   /* Soft green border */
+            --shadow:     0 4px 24px rgba(26,61,43,0.10);
+            --shadow-lg:  0 8px 40px rgba(26,61,43,0.15);
+            --card-bg:    #ffffff;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--forest-2xl);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Subtle background pattern */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 70% 50% at 0% 0%, rgba(26,61,43,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 100% 100%, rgba(64,145,108,0.05) 0%, transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── NAVIGATION ──────────────────────────────────── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: .9rem 2.5rem;
+            background: var(--forest);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700; font-size: 1.5rem;
+            color: var(--white); letter-spacing: .5px;
+        }
+
+        .logo span { color: var(--sage); }
+
+        .nav-links { display: flex; gap: .3rem; align-items: center; }
+
+        .nav-link {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none; font-size: .85rem; font-weight: 500;
+            padding: .45rem .9rem; border-radius: 8px; transition: .2s;
+        }
+
+        .nav-link:hover { color: white; background: rgba(255,255,255,0.1); }
+
+        .nav-link.active {
+            color: var(--forest);
+            background: var(--sage);
+            font-weight: 600;
+        }
+
+        /* ── PAGE WRAPPER ────────────────────────────────── */
+        .page {
+            position: relative; z-index: 1;
+            padding: 5.5rem 1.5rem 3rem;
+            max-width: 1050px; margin: 0 auto;
+        }
+
+        /* ── CARDS ───────────────────────────────────────── */
+        .card {
+            background: var(--card-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 20px; padding: 2rem;
+            box-shadow: var(--shadow);
+            position: relative; overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-top {
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+
+        /* ── HEADINGS ────────────────────────────────────── */
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem; font-weight: 700;
+            color: var(--forest); margin-bottom: .35rem;
+            letter-spacing: .2px;
+        }
+
+        .section-sub {
+            color: var(--muted); font-size: .9rem;
+            margin-bottom: 1.5rem; line-height: 1.6;
+        }
+
+        /* ── BUTTONS ─────────────────────────────────────── */
+        .btn-primary {
+            background: var(--forest);
+            color: white; border: none; border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: .95rem; font-weight: 700;
+            padding: .85rem 2rem; cursor: pointer; transition: .2s;
+            box-shadow: 0 4px 16px rgba(26,61,43,0.25);
+            display: inline-flex; align-items: center; gap: .5rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--forest-md);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(26,61,43,0.3);
+        }
+
+        .btn-secondary {
+            background: var(--forest-xl);
+            color: var(--forest); border: 1.5px solid var(--border);
+            border-radius: 12px; font-family: 'DM Sans', sans-serif;
+            font-size: .88rem; font-weight: 600;
+            padding: .65rem 1.25rem; cursor: pointer; transition: .2s;
+            text-decoration: none; display: inline-flex; align-items: center; gap: .4rem;
+        }
+
+        .btn-secondary:hover { background: var(--border); }
+
+        .btn-danger {
+            background: #fee2e2; color: #dc2626;
+            border: 1.5px solid #fecaca;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            font-size: .82rem; font-weight: 600;
+            padding: .4rem .85rem; cursor: pointer; transition: .2s;
+            text-decoration: none;
+        }
+
+        .btn-danger:hover { background: #fecaca; }
+
+        /* ── FORM ELEMENTS ───────────────────────────────── */
+        .form-group { margin-bottom: 1.25rem; }
+
+        label {
+            display: block; font-size: .78rem; font-weight: 700;
+            color: var(--muted); text-transform: uppercase;
+            letter-spacing: .8px; margin-bottom: .5rem;
+        }
+
+        input[type=number], select {
+            width: 100%; background: var(--forest-2xl);
+            border: 1.5px solid var(--border); border-radius: 12px;
+            color: var(--text); font-family: 'DM Sans', sans-serif;
+            font-size: .95rem; padding: .8rem 1rem; outline: none; transition: .2s;
+        }
+
+        input[type=number]:focus, select:focus {
+            border-color: var(--forest-lt);
+            box-shadow: 0 0 0 3px rgba(64,145,108,0.12);
+        }
+
+        /* ── BADGES ──────────────────────────────────────── */
+        .badge {
+            display: inline-flex; align-items: center; gap: .3rem;
+            padding: .3rem .75rem; border-radius: 999px;
+            font-size: .75rem; font-weight: 700;
+        }
+
+        .badge-green  { background: var(--forest-xl); color: var(--forest); border: 1px solid var(--border); }
+        .badge-gold   { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+        .badge-blue   { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .badge-red    { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
+        /* ── STATS GRID ──────────────────────────────────── */
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .85rem; margin-bottom: 1.5rem; }
+
+        .stat-box {
+            background: var(--card-bg); border: 1.5px solid var(--border);
+            border-radius: 16px; padding: 1.25rem; text-align: center;
+            box-shadow: var(--shadow); position: relative; overflow: hidden;
+        }
+
+        .stat-box::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+
+        .sb-forest::before  { background: var(--forest); }
+        .sb-sage::before    { background: var(--forest-lt); }
+        .sb-gold::before    { background: var(--gold); }
+        .sb-amber::before   { background: var(--amber); }
+
+        .stat-icon { font-size: 1.4rem; margin-bottom: .5rem; }
+        .stat-num  { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 700; line-height: 1; }
+        .stat-lbl  { font-size: .72rem; color: var(--muted); margin-top: .25rem; }
+
+        /* ── ERROR BOX ───────────────────────────────────── */
+        .error-box {
+            background: #fef2f2; border: 1.5px solid #fecaca;
+            border-radius: 12px; padding: 1rem 1.25rem;
+            color: #dc2626; font-size: .88rem; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: .75rem;
+        }
+
+        /* ── TABLES ──────────────────────────────────────── */
+        .tbl-wrap { overflow-x: auto; border-radius: 12px; border: 1.5px solid var(--border); }
+
+        table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+
+        thead th {
+            background: var(--forest); color: white;
+            padding: .75rem 1rem; text-align: left;
+            font-size: .72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .5px;
+        }
+
+        tbody tr { border-top: 1px solid var(--border); transition: .15s; }
+        tbody tr:hover { background: var(--forest-2xl); }
+        tbody td { padding: .75rem 1rem; vertical-align: middle; }
+
+        /* ── UPLOAD ZONE ─────────────────────────────────── */
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 16px;
+            padding: 2rem; text-align: center; cursor: pointer;
+            transition: .2s; position: relative; background: var(--forest-2xl);
+        }
+
+        .upload-zone:hover, .upload-zone.drag {
+            border-color: var(--forest-lt); background: var(--forest-xl);
+        }
+
+        .upload-zone input[type=file] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+
+        .upload-icon { font-size: 2rem; margin-bottom: .5rem; }
+        .upload-title { font-weight: 700; font-size: .97rem; margin-bottom: .25rem; }
+        .upload-sub { color: var(--muted); font-size: .82rem; }
+
+        /* ── SPINNER ─────────────────────────────────────── */
+        .spinner {
+            display: none; width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: white; border-radius: 50%;
+            animation: spin .7s linear infinite; margin: 0 auto;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── ANIMATIONS ──────────────────────────────────── */
+        .fade-in { animation: fadeIn .5s ease both; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── RESPONSIVE ──────────────────────────────────── */
+        @media(max-width: 768px) {
+            nav { padding: .85rem 1.25rem; }
+            .page { padding: 5rem 1rem 2rem; }
+            .stats-grid { grid-template-columns: repeat(2,1fr); }
+            .card { padding: 1.25rem; }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ── NAVIGATION ─────────────────────────────────────── -->
+<nav>
+    <div class="logo">Forecast<span>IQ</span></div>
+    <div class="nav-links">
+        <a href="{% url 'index' %}"     class="nav-link {% block nav_index %}{% endblock %}">📊 Forecast</a>
+        <a href="{% url 'history' %}"   class="nav-link {% block nav_history %}{% endblock %}">📋 History</a>
+        <a href="{% url 'dashboard' %}" class="nav-link {% block nav_dashboard %}{% endblock %}">📈 Dashboard</a>
+        <a href="{% url 'about' %}"     class="nav-link {% block nav_about %}{% endblock %}">ℹ️ About</a>
+    </div>
+</nav>
+
+<!-- ── PAGE CONTENT ───────────────────────────────────── -->
+<div class="page fade-in">
+    {% block content %}{% endblock %}
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

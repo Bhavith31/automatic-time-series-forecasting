@@ -1,0 +1,78 @@
+{% extends 'forecaster/base.html' %}
+{% block title %}Dashboard — ForecastIQ{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<h1 class="section-title">📈 Analytics Dashboard</h1>
+<p class="section-sub">Summary statistics from all your forecasting sessions</p>
+
+<div class="stats-grid">
+    <div class="stat-box sb-forest">
+        <div class="stat-icon">🔍</div>
+        <div class="stat-num" style="color:var(--forest)">{{ total_forecasts }}</div>
+        <div class="stat-lbl">Total Forecasts</div>
+    </div>
+    <div class="stat-box sb-sage">
+        <div class="stat-icon">📈</div>
+        <div class="stat-num" style="color:var(--forest-lt)">{{ upward }}</div>
+        <div class="stat-lbl">Upward Trends</div>
+    </div>
+    <div class="stat-box sb-gold">
+        <div class="stat-icon">📉</div>
+        <div class="stat-num" style="color:var(--gold)">{{ downward }}</div>
+        <div class="stat-lbl">Downward Trends</div>
+    </div>
+    <div class="stat-box sb-amber">
+        <div class="stat-icon">➡️</div>
+        <div class="stat-num" style="color:var(--amber)">{{ stable }}</div>
+        <div class="stat-lbl">Stable Trends</div>
+    </div>
+</div>
+
+{% if total_forecasts > 0 %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+    <div class="card">
+        <div class="card-top" style="background:linear-gradient(90deg,var(--forest),var(--forest-lt))"></div>
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:.5rem">Trend Distribution</div>
+        <div style="height:220px"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+        <div class="card-top" style="background:var(--gold)"></div>
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:1rem">Recent Forecasts</div>
+        {% for f in forecasts %}
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.dataset_name }}</div>
+                <div style="font-size:.72rem;color:var(--muted)">{{ f.created_at|date:"M d, Y" }} · {{ f.forecast_days }} days</div>
+            </div>
+            <span style="font-size:.82rem">{{ f.trend }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: ['📈 Upward','📉 Downward','➡️ Stable'],
+        datasets:[{
+            data:[{{ upward }},{{ downward }},{{ stable }}],
+            backgroundColor:['#2d6a4f','#c9a84c','#95d5b2'],
+            borderColor:'#fff', borderWidth:3, hoverOffset:8
+        }]
+    },
+    options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ color:'#6b8f71', font:{family:'DM Sans',size:11}, padding:14 } } }
+    }
+});
+</script>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem">
+    <div style="font-size:2.5rem;margin-bottom:1rem">📊</div>
+    <div style="color:var(--muted)">No forecasts yet. Run your first forecast to see analytics!</div>
+    <a href="{% url 'index' %}" class="btn-primary" style="text-decoration:none;margin-top:1rem;display:inline-flex">← Go Forecast</a>
+</div>
+{% endif %}
+{% endblock %}

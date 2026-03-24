@@ -1,0 +1,105 @@
+{% extends 'forecaster/base.html' %}
+{% block title %}About — ForecastIQ{% endblock %}
+{% block nav_about %}active{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<div style="background:linear-gradient(135deg,var(--forest) 0%,var(--forest-md) 60%,var(--forest-lt) 100%);border-radius:24px;padding:3rem 2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;box-shadow:var(--shadow-lg)">
+    <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.05)"></div>
+    <div style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:white;font-size:.75rem;font-weight:700;padding:.35rem 1rem;border-radius:999px;margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:.5px">
+        ℹ️ Project Overview
+    </div>
+    <h1 style="font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;color:white;margin-bottom:.75rem">About ForecastIQ</h1>
+    <p style="color:rgba(255,255,255,0.82);font-size:1rem;line-height:1.7;max-width:580px">
+        ForecastIQ is an automatic time series forecasting web application built using Python, Django, and Machine Learning. Upload any sales CSV and get instant AI-powered forecasts with interactive charts.
+    </p>
+    <div style="display:flex;gap:2rem;margin-top:1.75rem;flex-wrap:wrap">
+        {% for stat in hero_stats %}
+        <div style="color:white">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;line-height:1">{{ stat.num }}</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,0.6);margin-top:.15rem">{{ stat.lbl }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- WHAT IS IT -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--forest),var(--forest-lt))"></div>
+    <div class="section-title">🌿 What is ForecastIQ?</div>
+    <p style="color:var(--muted);line-height:1.8;margin-bottom:1rem">
+        ForecastIQ is a Django web application that uses <strong>Prophet</strong> — a Machine Learning technique —
+        to predict future values based on past patterns. It is designed for sales and revenue forecasting,
+        but works with any time series data (stock prices, website traffic, temperature readings, etc.)
+    </p>
+    <div style="background:var(--forest-xl);border:1.5px solid var(--border);border-radius:14px;padding:1rem 1.25rem">
+        <strong style="color:var(--forest)">💡 Simple Explanation:</strong>
+        <span style="color:var(--muted)"> You give the app your past sales numbers. It finds the trend (going up or down?),
+        draws a line through your data, and extends that line into the future. Those extended values = your forecast!</span>
+    </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--forest-lt),var(--sage))"></div>
+    <div class="section-title">🧠 How Forecasting Works</div>
+    <p class="section-sub">Step by step — what happens when you click "Run Forecast"</p>
+
+    {% for step in steps %}
+    <div style="display:flex;gap:1.25rem;padding:1.1rem 0;border-bottom:1px solid var(--border);position:relative">
+        {% if not forloop.last %}
+        <div style="position:absolute;left:19px;top:54px;bottom:-16px;width:2px;background:linear-gradient(180deg,var(--forest-lt),transparent)"></div>
+        {% endif %}
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--forest);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:.9rem;flex-shrink:0;box-shadow:0 4px 12px rgba(26,61,43,0.25)">{{ forloop.counter }}</div>
+        <div>
+            <div style="font-weight:700;font-size:.97rem;margin-bottom:.35rem;color:var(--forest)">{{ step.title }}</div>
+            <div style="font-size:.85rem;color:var(--muted);line-height:1.7">{{ step.desc }}</div>
+            {% if step.code %}
+            <code style="display:inline-block;background:var(--forest-xl);border:1px solid var(--border);border-radius:6px;padding:.3rem .75rem;font-size:.78rem;color:var(--forest);margin-top:.4rem">{{ step.code }}</code>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- TECH STACK -->
+<div class="card">
+    <div class="card-top" style="background:var(--gold)"></div>
+    <div class="section-title">🛠️ Technology Stack</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.85rem">
+        {% for tech in tech_stack %}
+        <div style="display:flex;align-items:flex-start;gap:.85rem;background:var(--forest-2xl);border:1.5px solid var(--border);border-radius:14px;padding:1rem">
+            <div style="width:38px;height:38px;border-radius:10px;background:var(--forest-xl);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">{{ tech.icon }}</div>
+            <div>
+                <div style="font-weight:700;font-size:.9rem;margin-bottom:.2rem;color:var(--forest)">{{ tech.name }}</div>
+                <div style="font-size:.78rem;color:var(--muted);line-height:1.5">{{ tech.role }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- FAQ -->
+<div class="card">
+    <div class="card-top" style="background:linear-gradient(90deg,var(--sage),var(--forest-xl))"></div>
+    <div class="section-title">❓ Common Questions</div>
+    {% for faq in faqs %}
+    <div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:.65rem;overflow:hidden">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+             style="padding:.9rem 1.1rem;font-weight:700;font-size:.9rem;cursor:pointer;background:var(--forest-2xl);display:flex;justify-content:space-between;align-items:center;color:var(--forest)">
+            {{ faq.q }} <span style="color:var(--muted);font-size:.8rem">›</span>
+        </div>
+        <div style="display:none;padding:.85rem 1.1rem;font-size:.85rem;color:var(--muted);line-height:1.7;background:white;border-top:1px solid var(--border)">
+            {{ faq.a }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:.82rem;border-top:1.5px solid var(--border);margin-top:.5rem">
+    Built with 🌿 Django · Python · scikit-learn · Chart.js<br>
+    ForecastIQ — Automatic Time Series Forecasting · Academic Project
+</div>
+
+{% endblock %}
